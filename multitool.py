@@ -1,250 +1,339 @@
-#!/usr/bin/env python3
-"""
-Educational Multi-Tool - Python
-Fiha: Port Scanner + Password Strength Checker
-
-⚠️ Khddem Port Scanner ghir 3la:
-   - L jhaz dyalk lkhas
-   - Lab machia lta3lim (bhal scanme.nmap.org, TryHackMe, HackTheBox)
-   - Targets fin 3ndk idn ktabi
-"""
 
 import socket
 import string
 import math
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from getpass import getpass
 
 
 # ============================================================
-#  TOOL 1: PORT SCANNER
+# PORT SCANNER
 # ============================================================
+
+def check_port(target_ip, port, timeout=0.5):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+
+    try:
+        result = sock.connect_ex((target_ip, port))
+
+        if result == 0:
+            try:
+                service = socket.getservbyport(port, "tcp")
+            except OSError:
+                service = "unknown"
+
+            return port, service
+
+    except (socket.timeout, OSError):
+        pass
+
+    finally:
+        sock.close()
+
+    return None
+
 
 def port_scanner():
-    print("\n[Port Scanner]")
-    target = input("Dkhel IP wla hostname (mtalan scanme.nmap.org): ").strip()
+
+    print("\n" + "=" * 60)
+    print("PORT SCANNER")
+    print("=" * 60)
+
+    target = input("Target IP/hostname: ").strip()
+
     try:
-        start_port = int(input("Port lbidaya (mtalan 20): "))
-        end_port = int(input("Port nihaya (mtalan 100): "))
+        start_port = int(input("Start port: "))
+        end_port = int(input("End port: "))
     except ValueError:
-        print("[!] Khassek dkhel rakm s7i7.")
+        print("[!] Port khaso يكون ra9m.")
         return
 
-    print(f"\n[*] Kanbda nscanni {target} mn port {start_port} l {end_port}...\n")
+    if not (1 <= start_port <= 65535):
+        print("[!] Start port khaso يكون بين 1 و 65535.")
+        return
+
+    if not (1 <= end_port <= 65535):
+        print("[!] End port khaso يكون بين 1 و 65535.")
+        return
+
+    if start_port > end_port:
+        print("[!] Start port ma ymknch يكون kber mn end port.")
+        return
 
     try:
         target_ip = socket.gethostbyname(target)
     except socket.gaierror:
-        print("[!] Ma9dertch nl9a l hostname.")
+        print("[!] Ma9dertch nl9a target.")
         return
 
+    print(f"\n[*] Target : {target}")
+    print(f"[*] IP     : {target_ip}")
+    print(f"[*] Ports  : {start_port}-{end_port}")
+    print("[*] Scanning...\n")
+
     open_ports = []
-    for port in range(start_port, end_port + 1):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(0.5)
-        result = sock.connect_ex((target_ip, port))
-        if result == 0:
-            print(f"[+] Port {port}/tcp mftou7")
-            open_ports.append(port)
-        sock.close()
 
-    print(f"\n[*] Scan salat. 3adad dyal ports lmftou7in: {len(open_ports)}")
+    ports = range(start_port, end_port + 1)
+
+    with ThreadPoolExecutor(max_workers=50) as executor:
+
+        futures = [
+            executor.submit(check_port, target_ip, port)
+            for port in ports
+        ]
+
+        for future in as_completed(futures):
+
+            result = future.result()
+
+            if result:
+                port, service = result
+
+                open_ports.append((port, service))
+
+                print(
+                    f"[+] {port}/tcp OPEN"
+                    f"    Service: {service}"
+                )
+
+    open_ports.sort()
+
+    print("\n" + "-" * 60)
+    print(f"[*] Scan salat.")
+    print(f"[*] Open ports: {len(open_ports)}")
+    print("-" * 60)
 
 
 # ============================================================
-#  TOOL 2: PASSWORD STRENGTH CHECKER
+# PASSWORD STRENGTH CHECKER
 # ============================================================
 
-def analyze_password(password: str) -> dict:
+COMMON_PASSWORDS = {
+    "123456",
+    "password",
+    "123456789",
+    "12345678",
+    "12345",
+    "qwerty",
+    "abc123",
+    "password1",
+    "admin",
+    "letmein",
+    "welcome",
+    "monkey",
+    "111111",
+    "iloveyou",
+    "azerty",
+}
+
+
+def analyze_password(password):
+
     length = len(password)
 
-    has_lower = any(c in string.ascii_lowercase for c in password)
-    has_upper = any(c in string.ascii_uppercase for c in password)
-    has_digit = any(c in string.digits for c in password)
-    has_symbol = any(c in string.punctuation for c in password)
-    has_space = " " in password
+    has_lower = any(
+        c in string.ascii_lowercase
+        for c in password
+    )
+
+    has_upper = any(
+        c in string.ascii_uppercase
+        for c in password
+    )
+
+    has_digit = any(
+        c in string.digits
+        for c in password
+    )
+
+    has_symbol = any(
+        c in string.punctuation
+        for c in password
+    )
 
     charset_size = 0
+
     if has_lower:
         charset_size += 26
+
     if has_upper:
         charset_size += 26
+
     if has_digit:
         charset_size += 10
+
     if has_symbol:
         charset_size += len(string.punctuation)
-    if has_space:
-        charset_size += 1
 
-    if charset_size > 0 and length > 0:
+    if length > 0 and charset_size > 0:
         entropy = length * math.log2(charset_size)
     else:
         entropy = 0
 
-    # Kanftardo attacker 9ader yjarreb 10 milyar mo7awala/tanya (GPU 7ditha)
-    guesses_per_second = 10_000_000_000
-    total_combinations = charset_size ** length if charset_size > 0 else 0
-    seconds_to_crack = (total_combinations / 2) / guesses_per_second if guesses_per_second > 0 else 0
+    common = password.lower() in COMMON_PASSWORDS
 
-    # Lista basita dyal passwords cha2i3in bzaf (lta3lim)
-    common_passwords = {
-        "123456", "password", "123456789", "12345678", "12345",
-        "qwerty", "abc123", "password1", "admin", "letmein",
-        "welcome", "monkey", "111111", "iloveyou", "azerty"
-    }
-    is_common = password.lower() in common_passwords
+    repeated = False
 
-    # Chouf wach kayn tekrar kbir dyal l7oroof (bhal "aaaaaa")
-    has_repetition = any(password.count(c) > length * 0.5 for c in set(password)) if length > 0 else False
+    if length > 0:
+        for char in set(password):
+            if password.count(char) > length * 0.5:
+                repeated = True
+                break
 
     return {
         "length": length,
-        "has_lower": has_lower,
-        "has_upper": has_upper,
-        "has_digit": has_digit,
-        "has_symbol": has_symbol,
-        "charset_size": charset_size,
-        "entropy_bits": entropy,
-        "seconds_to_crack": seconds_to_crack,
-        "is_common": is_common,
-        "has_repetition": has_repetition,
+        "lower": has_lower,
+        "upper": has_upper,
+        "digit": has_digit,
+        "symbol": has_symbol,
+        "charset": charset_size,
+        "entropy": entropy,
+        "common": common,
+        "repeated": repeated,
     }
 
 
-def format_time(seconds: float) -> str:
-    """Kaydir convert dyal tawaniya l siga mafhouma (da9ay9, snin...)"""
-    if seconds < 1:
-        return "A9el mn tanya"
-    elif seconds < 60:
-        return f"{seconds:.1f} tanya"
-    elif seconds < 3600:
-        return f"{seconds/60:.1f} de9i9a"
-    elif seconds < 86400:
-        return f"{seconds/3600:.1f} sa3a"
-    elif seconds < 31536000:
-        return f"{seconds/86400:.1f} nhar"
-    elif seconds < 31536000 * 100:
-        return f"{seconds/31536000:.1f} 3am"
-    else:
-        years = seconds / 31536000
-        if years > 1e12:
-            return "Blayin dyal snin (mostahil 3ملia)"
-        return f"{years:.2e} 3am"
+def get_strength(analysis):
 
+    entropy = analysis["entropy"]
 
-def get_strength_label(analysis: dict) -> tuple:
-    entropy = analysis["entropy_bits"]
+    if analysis["common"]:
+        return "VERY WEAK"
 
-    if analysis["is_common"]:
-        return ("D3ifa bzaf - Password cha2i3a bzaf!", "🔴")
-    if analysis["has_repetition"]:
-        return ("D3ifa - fiha tekrar kbir", "🔴")
+    if analysis["repeated"]:
+        return "WEAK"
+
     if entropy < 28:
-        return ("D3ifa bzaf", "🔴")
-    elif entropy < 36:
-        return ("D3ifa", "🟠")
-    elif entropy < 60:
-        return ("Motawassita", "🟡")
-    elif entropy < 100:
-        return ("9awya", "🟢")
-    else:
-        return ("9awya bzaf", "🟢")
+        return "VERY WEAK"
 
+    if entropy < 36:
+        return "WEAK"
 
-def print_password_report(password: str):
-    analysis = analyze_password(password)
-    label, emoji = get_strength_label(analysis)
+    if entropy < 60:
+        return "MEDIUM"
 
-    print("\n" + "=" * 55)
-    print(f"  Ra9m dyal 9owwa dyal Password")
-    print("=" * 55)
+    if entropy < 100:
+        return "STRONG"
 
-    # Wri password mkhbya b jouj dyal l7oroof ghir (aman)
-    masked = password[:2] + "*" * (len(password) - 2) if len(password) > 2 else "*" * len(password)
-    print(f"  Password (mkhbya): {masked}")
-    print(f"  Toul: {analysis['length']} 7arf")
-    print("-" * 55)
-
-    print("  No3 l7oroof mosta3mlin:")
-    print(f"    - 7oroof sghar (a-z): {'✓' if analysis['has_lower'] else '✗'}")
-    print(f"    - 7oroof kbar (A-Z): {'✓' if analysis['has_upper'] else '✗'}")
-    print(f"    - Ar9am (0-9): {'✓' if analysis['has_digit'] else '✗'}")
-    print(f"    - Rmouz (!@#$...): {'✓' if analysis['has_symbol'] else '✗'}")
-    print("-" * 55)
-
-    print(f"  Entropy: {analysis['entropy_bits']:.1f} bits")
-    print(f"  We9t lkasr lmoqadar (brute-force): {format_time(analysis['seconds_to_crack'])}")
-    print("-" * 55)
-
-    if analysis["is_common"]:
-        print("  ⚠️  Tanbih: had password mawjouda f la9wayem dyal l-passwords cha2i3in!")
-    if analysis["has_repetition"]:
-        print("  ⚠️  Tanbih: fiha tekrar kbir dyal l7oroof")
-    if analysis["length"] < 8:
-        print("  ⚠️  Tanbih: 9sira bzaf (kanansa7 b 12+ 7arf)")
-
-    print("-" * 55)
-    print(f"  Natija nha2iya: {emoji} {label}")
-    print("=" * 55)
-
-    tips = []
-    if analysis["length"] < 12:
-        tips.append("Zid f toul (12+ 7arf a7san)")
-    if not analysis["has_upper"]:
-        tips.append("Zid 7oroof kbar (A-Z)")
-    if not analysis["has_digit"]:
-        tips.append("Zid ar9am")
-    if not analysis["has_symbol"]:
-        tips.append("Zid rmouz (!@#$%...)")
-    if analysis["is_common"]:
-        tips.append("Bdelha - hadi cha2i3a bzaf")
-
-    if tips:
-        print("\n  💡 Nsayeh bach t9awiha:")
-        for tip in tips:
-            print(f"    - {tip}")
-    print()
+    return "VERY STRONG"
 
 
 def password_checker():
-    print("\n[Password Strength Checker]")
-    pwd = input("Dkhel password (mgadich ttahfad wla ttab3at l7ad): ").strip()
-    if not pwd:
-        print("[!] Makaynch password.")
+
+    print("\n" + "=" * 60)
+    print("PASSWORD STRENGTH CHECKER")
+    print("=" * 60)
+
+    password = getpass("Password: ")
+
+    if not password:
+        print("[!] Password khawya.")
         return
-    print_password_report(pwd)
+
+    result = analyze_password(password)
+
+    strength = get_strength(result)
+
+    print("\n" + "-" * 60)
+
+    print(f"Length       : {result['length']}")
+    print(f"Lowercase    : {'YES' if result['lower'] else 'NO'}")
+    print(f"Uppercase    : {'YES' if result['upper'] else 'NO'}")
+    print(f"Numbers      : {'YES' if result['digit'] else 'NO'}")
+    print(f"Symbols      : {'YES' if result['symbol'] else 'NO'}")
+    print(f"Entropy      : {result['entropy']:.1f} bits")
+    print(f"Common       : {'YES' if result['common'] else 'NO'}")
+    print(f"Repetition   : {'YES' if result['repeated'] else 'NO'}")
+
+    print("-" * 60)
+    print(f"STRENGTH     : {strength}")
+    print("-" * 60)
+
+    print("\nRecommendations:")
+
+    tips = []
+
+    if result["length"] < 12:
+        tips.append("Zid f length, 12+ characters a7san.")
+
+    if not result["lower"]:
+        tips.append("Zid lowercase.")
+
+    if not result["upper"]:
+        tips.append("Zid uppercase.")
+
+    if not result["digit"]:
+        tips.append("Zid numbers.")
+
+    if not result["symbol"]:
+        tips.append("Zid symbols.")
+
+    if result["common"]:
+        tips.append("Matsta3mlch password cha2i3a.")
+
+    if result["repeated"]:
+        tips.append("Tjanab repetition kbir.")
+
+    if not tips:
+        print("  [+] Password kayban 9awi.")
+
+    else:
+        for tip in tips:
+            print(f"  - {tip}")
+
+    print()
 
 
 # ============================================================
-#  MAIN MENU
+# BANNER
 # ============================================================
 
 def banner():
-    print("=" * 50)
-    print("   Educational Multi-Tool - Python")
-    print("=" * 50)
 
+    print("""
+============================================================
+                    CYBERSCAN v2
+============================================================
+        Educational Cybersecurity Multi-Tool
 
-def main_menu():
-    banner()
-    while True:
-        print("""
-Khtar wazifa:
-  1) Port Scanner
-  2) Password Strength Checker
-  3) Khoroj (Exit)
+        [1] Port Scanner
+        [2] Password Strength Checker
+        [3] Exit
+============================================================
 """)
-        choice = input("Lekhtiyar dyalk: ").strip()
+
+
+# ============================================================
+# MAIN MENU
+# ============================================================
+
+def main():
+
+    while True:
+
+        banner()
+
+        choice = input("Choice: ").strip()
 
         if choice == "1":
+
             port_scanner()
+
         elif choice == "2":
+
             password_checker()
+
         elif choice == "3":
-            print("Slam!")
-            sys.exit()
+
+            print("\nSlam! 👋")
+            sys.exit(0)
+
         else:
-            print("[!] Khtiyar khayb, 3awed.")
+
+            print("[!] Choice ghalat.")
 
 
 if __name__ == "__main__":
-    main_menu()
+    main()
