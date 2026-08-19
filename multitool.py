@@ -5,12 +5,12 @@ import string
 import math
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from getpass import getpass
 from datetime import datetime
 
 
 # ============================================================
-# CONFIGURATION
+# CYBERSCAN v4
+# Educational Cybersecurity Multi-Tool
 # ============================================================
 
 MAX_THREADS = 50
@@ -71,7 +71,6 @@ def check_port(target_ip, port, timeout=DEFAULT_TIMEOUT):
     sock.settimeout(timeout)
 
     try:
-
         result = sock.connect_ex(
             (target_ip, port)
         )
@@ -79,21 +78,19 @@ def check_port(target_ip, port, timeout=DEFAULT_TIMEOUT):
         if result != 0:
             return None
 
+        # Try to identify the standard service
         try:
-
             service = socket.getservbyport(
                 port,
                 "tcp"
             )
-
         except OSError:
-
             service = "unknown"
 
+        # Basic HTTP banner attempt
         banner = ""
 
         try:
-
             sock.sendall(
                 b"HEAD / HTTP/1.0\r\n\r\n"
             )
@@ -110,10 +107,7 @@ def check_port(target_ip, port, timeout=DEFAULT_TIMEOUT):
                 .replace("\n", " ")
             )
 
-        except (
-            socket.timeout,
-            OSError
-        ):
+        except (socket.timeout, OSError):
             pass
 
         return {
@@ -122,37 +116,28 @@ def check_port(target_ip, port, timeout=DEFAULT_TIMEOUT):
             "banner": banner[:100]
         }
 
-    except (
-        socket.timeout,
-        OSError
-    ):
-
+    except (socket.timeout, OSError):
         return None
 
     finally:
-
         sock.close()
 
 
 def validate_ports(start_port, end_port):
 
     if not 1 <= start_port <= 65535:
-
         raise ValueError(
             "Start port khaso يكون بين 1 و 65535."
         )
 
     if not 1 <= end_port <= 65535:
-
         raise ValueError(
             "End port khaso يكون بين 1 و 65535."
         )
 
     if start_port > end_port:
-
         raise ValueError(
-            "Start port ma ymknch يكون "
-            "kber mn end port."
+            "Start port ma ymknch يكون kber mn end port."
         )
 
 
@@ -161,9 +146,7 @@ def save_scan_results(
     target_ip,
     results
 ):
-
     try:
-
         with open(
             RESULT_FILE,
             "a",
@@ -171,26 +154,18 @@ def save_scan_results(
         ) as file:
 
             file.write("\n")
-            file.write(
-                "=" * 70 + "\n"
-            )
-
+            file.write("=" * 70 + "\n")
             file.write(
                 f"Scan date: "
                 f"{datetime.now().isoformat()}\n"
             )
-
             file.write(
                 f"Target: {target}\n"
             )
-
             file.write(
                 f"IP: {target_ip}\n"
             )
-
-            file.write(
-                "=" * 70 + "\n"
-            )
+            file.write("=" * 70 + "\n")
 
             for result in results:
 
@@ -225,12 +200,10 @@ def port_scanner():
     ).strip()
 
     if not target:
-
         print("[!] Target khawi.")
         return
 
     try:
-
         start_port = int(
             input("Start port: ")
         )
@@ -250,7 +223,6 @@ def port_scanner():
         return
 
     try:
-
         target_ip = socket.gethostbyname(
             target
         )
@@ -268,31 +240,16 @@ def port_scanner():
     )
 
     print()
-    print(
-        f"[*] Target : {target}"
-    )
-
-    print(
-        f"[*] IP     : {target_ip}"
-    )
-
+    print(f"[*] Target : {target}")
+    print(f"[*] IP     : {target_ip}")
     print(
         f"[*] Range  : "
         f"{start_port}-{end_port}"
     )
-
-    print(
-        f"[*] Ports  : {total_ports}"
-    )
-
-    print(
-        "[*] Scanning..."
-    )
-
-    print()
+    print(f"[*] Ports  : {total_ports}")
+    print("[*] Scanning...\n")
 
     results = []
-
     completed = 0
 
     ports = range(
@@ -314,25 +271,18 @@ def port_scanner():
             for port in ports
         }
 
-        for future in as_completed(
-            futures
-        ):
+        for future in as_completed(futures):
 
             completed += 1
 
             try:
-
                 result = future.result()
-
             except Exception:
-
                 result = None
 
             if result:
 
-                results.append(
-                    result
-                )
+                results.append(result)
 
                 print(
                     f"\n[+] "
@@ -364,42 +314,28 @@ def port_scanner():
             )
 
     results.sort(
-        key=lambda item:
-        item["port"]
+        key=lambda item: item["port"]
     )
 
     print("\n")
 
-    print(
-        "=" * 70
-    )
+    print("=" * 70)
+    print("SCAN FINISHED")
+    print("=" * 70)
 
     print(
-        "SCAN FINISHED"
-    )
-
-    print(
-        "=" * 70
-    )
-
-    print(
-        f"Open ports: "
-        f"{len(results)}"
+        f"Open ports: {len(results)}"
     )
 
     if results:
 
-        print(
-            "\nOpen ports:"
-        )
+        print("\nOpen ports:")
 
         for result in results:
 
             print(
-                f"  "
-                f"{result['port']}/tcp "
-                f"- "
-                f"{result['service']}"
+                f"  {result['port']}/tcp "
+                f"- {result['service']}"
             )
 
         save_choice = input(
@@ -449,7 +385,6 @@ def has_sequence(password):
                 ]
 
                 if part in lower:
-
                     return True
 
     return False
@@ -462,7 +397,6 @@ def has_keyboard_pattern(password):
     for pattern in KEYBOARD_PATTERNS:
 
         if pattern in lower:
-
             return True
 
     return False
@@ -495,19 +429,15 @@ def analyze_password(password):
     charset_size = 0
 
     if has_lower:
-
         charset_size += 26
 
     if has_upper:
-
         charset_size += 26
 
     if has_digit:
-
         charset_size += 10
 
     if has_symbol:
-
         charset_size += len(
             string.punctuation
         )
@@ -520,7 +450,6 @@ def analyze_password(password):
         )
 
     else:
-
         entropy = 0
 
     common = (
@@ -568,37 +497,29 @@ def analyze_password(password):
 def get_strength(result):
 
     if result["common"]:
-
         return "VERY WEAK"
 
     if result["keyboard"]:
-
         return "VERY WEAK"
 
     if result["sequence"]:
-
         return "WEAK"
 
     if result["repeated"]:
-
         return "WEAK"
 
     entropy = result["entropy"]
 
     if entropy < 28:
-
         return "VERY WEAK"
 
     if entropy < 36:
-
         return "WEAK"
 
     if entropy < 60:
-
         return "MEDIUM"
 
     if entropy < 100:
-
         return "STRONG"
 
     return "VERY STRONG"
@@ -610,7 +531,8 @@ def password_checker():
     print("PASSWORD STRENGTH CHECKER")
     print("=" * 70)
 
-    password = getpass(
+    # Password katban normal
+    password = input(
         "Password: "
     )
 
@@ -630,8 +552,10 @@ def password_checker():
         result
     )
 
+    print("\n" + "-" * 70)
+
     print(
-        "\n" + "-" * 70
+        f"Password     : {password}"
     )
 
     print(
@@ -684,26 +608,20 @@ def password_checker():
         f"{'YES' if result['keyboard'] else 'NO'}"
     )
 
-    print(
-        "-" * 70
-    )
+    print("-" * 70)
 
     print(
-        f"STRENGTH     : "
-        f"{strength}"
+        f"STRENGTH     : {strength}"
     )
 
-    print(
-        "-" * 70
-    )
+    print("-" * 70)
 
     tips = []
 
     if result["length"] < 12:
 
         tips.append(
-            "Zid f length: "
-            "12+ characters."
+            "Zid f length: 12+ characters."
         )
 
     if not result["lower"]:
@@ -733,29 +651,25 @@ def password_checker():
     if result["common"]:
 
         tips.append(
-            "Bdel password "
-            "7it common."
+            "Bdel password 7it common."
         )
 
     if result["sequence"]:
 
         tips.append(
-            "Tjanab sequences "
-            "bhal 123456."
+            "Tjanab sequences bhal 123456."
         )
 
     if result["keyboard"]:
 
         tips.append(
-            "Tjanab keyboard "
-            "patterns bhal qwerty."
+            "Tjanab keyboard patterns bhal qwerty."
         )
 
     if result["repeated"]:
 
         tips.append(
-            "Tjanab repetition "
-            "kbir."
+            "Tjanab repetition kbir."
         )
 
     print(
@@ -838,14 +752,10 @@ def network_info():
     except socket.error as error:
 
         print(
-            f"[!] Network error: "
-            f"{error}"
+            f"[!] Network error: {error}"
         )
 
-    print(
-        "=" * 70
-    )
-
+    print("=" * 70)
     print()
 
 
@@ -857,7 +767,7 @@ def banner():
 
     print("""
 ======================================================================
-                         CYBERSCAN v3
+                         CYBERSCAN v4
 ======================================================================
 
         Educational Cybersecurity Multi-Tool
@@ -913,9 +823,8 @@ def main():
 
 
 # ============================================================
-# START
+# START PROGRAM
 # ============================================================
 
 if __name__ == "__main__":
-
     main()
