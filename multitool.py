@@ -8,6 +8,7 @@ import urllib.request
 import urllib.error
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from datetime import datetime
 
 
@@ -971,6 +972,183 @@ def network_info():
 
 
 # ============================================================
+# FILE ORGANIZER
+# ============================================================
+
+def get_file_category(file_path):
+
+    extension = file_path.suffix.lower()
+
+    categories = {
+        "Images": {
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp",
+            ".webp", ".svg", ".ico", ".tiff"
+        },
+        "Videos": {
+            ".mp4", ".mkv", ".avi", ".mov", ".webm",
+            ".flv", ".wmv", ".m4v"
+        },
+        "Audio": {
+            ".mp3", ".wav", ".flac", ".aac", ".ogg",
+            ".m4a", ".opus"
+        },
+        "Documents": {
+            ".pdf", ".doc", ".docx", ".txt", ".rtf",
+            ".odt", ".xls", ".xlsx", ".csv",
+            ".ppt", ".pptx", ".odp"
+        },
+        "Archives": {
+            ".zip", ".rar", ".7z", ".tar", ".gz",
+            ".bz2", ".xz", ".tar.gz", ".tar.xz"
+        },
+        "Programs": {
+            ".exe", ".msi", ".deb", ".rpm", ".AppImage",
+            ".sh", ".bat", ".cmd", ".apk"
+        }
+    }
+
+    for category, extensions in categories.items():
+
+        if extension in extensions:
+            return category
+
+    return "Others"
+
+
+def unique_destination(destination):
+
+    if not destination.exists():
+        return destination
+
+    counter = 1
+
+    while True:
+
+        new_name = (
+            f"{destination.stem}_{counter}"
+            f"{destination.suffix}"
+        )
+
+        new_destination = (
+            destination.parent / new_name
+        )
+
+        if not new_destination.exists():
+            return new_destination
+
+        counter += 1
+
+
+def file_organizer():
+
+    print("\n" + "=" * 60)
+    print("FILE ORGANIZER")
+    print("=" * 60)
+
+    folder = input(
+        "Folder path (matalan ~/Downloads): "
+    ).strip()
+
+    if not folder:
+
+        print("[!] Folder khawi.")
+        return
+
+    folder_path = Path(folder).expanduser()
+
+    if not folder_path.exists():
+
+        print("[!] Had folder ma kaynach.")
+        return
+
+    if not folder_path.is_dir():
+
+        print("[!] Had path machi folder.")
+        return
+
+    files = [
+        file
+        for file in folder_path.iterdir()
+        if file.is_file()
+    ]
+
+    if not files:
+
+        print("[!] Ma kaynach files f had folder.")
+        return
+
+    print(
+        f"\n[*] Folder : {folder_path}"
+    )
+
+    print(
+        f"[*] Files  : {len(files)}"
+    )
+
+    confirm = input(
+        "Bghiti tbda torganizi files? (y/n): "
+    ).strip().lower()
+
+    if confirm != "y":
+
+        print("[*] Operation tlghat.")
+        return
+
+    moved = 0
+
+    for file in files:
+
+        category = get_file_category(file)
+
+        category_folder = (
+            folder_path / category
+        )
+
+        try:
+
+            category_folder.mkdir(
+                exist_ok=True
+            )
+
+            destination = (
+                category_folder / file.name
+            )
+
+            destination = unique_destination(
+                destination
+            )
+
+            file.rename(destination)
+
+            print(
+                f"[+] {file.name} -> "
+                f"{category}/"
+            )
+
+            moved += 1
+
+        except OSError as error:
+
+            print(
+                f"[!] Ma9dertch n7rek "
+                f"{file.name}: {error}"
+            )
+
+    print("\n" + "-" * 60)
+
+    print(
+        f"[+] Files torganizaw: {moved}/{len(files)}"
+    )
+
+    print(
+        "[+] Ma tms7 7ta file."
+    )
+
+    print("-" * 60)
+    print()
+
+
+# ============================================================
 # MAIN MENU
 # ============================================================
 
@@ -997,7 +1175,11 @@ def main():
         )
 
         print(
-            "[5] Exit"
+            "[5] File Organizer"
+        )
+
+        print(
+            "[6] Exit"
         )
 
         print()
@@ -1023,6 +1205,10 @@ def main():
             network_info()
 
         elif choice == "5":
+
+            file_organizer()
+
+        elif choice == "6":
 
             print(
                 "\nSlam! 👋"
