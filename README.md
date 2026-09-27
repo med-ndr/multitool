@@ -24,7 +24,7 @@
 ### التثبيت
 
 ```bash
-git clone <رابط المشروع ديالك>
+git clone https://github.com/med-ndr/multitool.git
 cd cyberscan
 python3 cyberscan.py
 ```
