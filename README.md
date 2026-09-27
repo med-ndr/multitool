@@ -82,7 +82,7 @@ A simple Python script that bundles 5 security/networking utilities into a singl
 ### Installation
 
 ```bash
-git clone <your-project-url>
+git clone https://github.com/med-ndr/multitool.git
 cd cyberscan
 python3 cyberscan.py
 ```
