@@ -118,6 +118,3 @@ Pick a number and follow the prompts (target, ports, wordlist path, etc.).
 
 This tool (particularly the port scanner and web content discovery modules) should only be used against targets you own or have explicit authorization to test (personal systems, or a CTF/lab/pentest engagement with proper consent). Using it against systems or networks you don't have permission to test is prohibited and may be illegal.
 
-## License
-
-Add whichever license fits your project (MIT, GPL, etc.).
