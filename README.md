@@ -114,5 +114,3 @@ Pick a number and follow the prompts (target, ports, wordlist path, etc.).
 - File Organizer: creates subfolders (Images, Videos, ...) and moves files into them.
 
 
-
-vvv
