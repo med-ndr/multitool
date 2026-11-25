@@ -56,5 +56,3 @@ Pick a number and follow the prompts (target, ports, wordlist path, etc.).
 - Port Scanner: optionally saves results to `scan_results.txt` (append mode).
 - Password Checker / Web Discovery / Network Info: results are printed to the terminal only.
 - File Organizer: creates subfolders (Images, Videos, ...) and moves files into them.
-
-.......
