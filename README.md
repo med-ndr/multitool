@@ -5,7 +5,6 @@
 
 ---
 
-## 🇬🇧 English
 
 A simple Python script that bundles 5 security/networking utilities into a single CLI menu.
 
