@@ -2,7 +2,6 @@
 
 ![CyberScan banner](./screenshot.png)
 
-*[English below / الانجليزية تحت]*
 
 ---
 
